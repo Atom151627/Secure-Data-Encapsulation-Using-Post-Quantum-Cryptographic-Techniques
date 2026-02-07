@@ -1,4 +1,3 @@
-```markdown|CODE_EDIT_BLOCK|c:\Users\adith\Downloads\Design\Design\README.md
 # Post-Quantum Cryptography (PQC) Suite
 
 A cutting-edge, high-security dashboard prototype designed to demonstrate and manage quantum-resistant cryptographic operations. This suite provides a comprehensive interface for NIST-standardized PQC algorithms, preparing digital infrastructure for the quantum computing era.
@@ -40,7 +39,6 @@ A cutting-edge, high-security dashboard prototype designed to demonstrate and ma
    ```bash
    git clone https://github.com/yourusername/pqc-suite.git
    cd pqc-suite
-   ```
 
 2. Install dependencies:
    ```bash
