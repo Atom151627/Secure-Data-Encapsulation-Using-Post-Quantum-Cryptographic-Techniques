@@ -11,6 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'dilithium-crystals-js': path.resolve(__dirname, 'node_modules/dilithium-crystals-js/dist/dilithium.min.js'),
     },
   },
   assetsInclude: ['**/*.svg', '**/*.csv'],

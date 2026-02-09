@@ -34,19 +34,12 @@ export function CertificateManager({ algorithm }: CertificateManagerProps) {
   });
 
   const generateSerialNumber = () => {
-    return Array.from({ length: 16 }, () => 
+    return Array.from({ length: 16 }, () =>
       Math.floor(Math.random() * 16).toString(16)
     ).join("").toUpperCase();
   };
 
-  const getCertificateStatus = (validUntil: Date): CertificateData["status"] => {
-    const now = new Date();
-    const daysUntilExpiry = Math.floor((validUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (daysUntilExpiry < 0) return "expired";
-    if (daysUntilExpiry < 30) return "expiring";
-    return "valid";
-  };
+
 
   const createCertificate = async () => {
     if (!formData.commonName || !formData.organization) {
@@ -75,7 +68,7 @@ export function CertificateManager({ algorithm }: CertificateManagerProps) {
     setCertificates(prev => [newCert, ...prev]);
     setFormData({ commonName: "", organization: "", validityDays: "365" });
     setIsCreating(false);
-    
+
     toast.success(`Post-quantum certificate created with ${algorithm}`);
   };
 
@@ -101,7 +94,7 @@ Public Key Algorithm: ${cert.algorithm}
     a.download = `${cert.commonName}-pqc.crt`;
     a.click();
     URL.revokeObjectURL(url);
-    
+
     toast.success("Certificate exported");
   };
 
@@ -136,7 +129,7 @@ Public Key Algorithm: ${cert.algorithm}
             <Plus className="h-4 w-4" />
             Create New Certificate
           </h4>
-          
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="commonName">Common Name (CN)</Label>
@@ -147,7 +140,7 @@ Public Key Algorithm: ${cert.algorithm}
                 onChange={(e) => setFormData(prev => ({ ...prev, commonName: e.target.value }))}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="organization">Organization</Label>
               <Input
@@ -157,7 +150,7 @@ Public Key Algorithm: ${cert.algorithm}
                 onChange={(e) => setFormData(prev => ({ ...prev, organization: e.target.value }))}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="validity">Validity (Days)</Label>
               <Input
@@ -168,7 +161,7 @@ Public Key Algorithm: ${cert.algorithm}
                 onChange={(e) => setFormData(prev => ({ ...prev, validityDays: e.target.value }))}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label>Algorithm</Label>
               <div className="h-10 flex items-center">
@@ -176,9 +169,9 @@ Public Key Algorithm: ${cert.algorithm}
               </div>
             </div>
           </div>
-          
-          <Button 
-            onClick={createCertificate} 
+
+          <Button
+            onClick={createCertificate}
             disabled={isCreating}
             className="w-full"
           >
@@ -208,7 +201,7 @@ Public Key Algorithm: ${cert.algorithm}
             <h4 className="text-sm font-semibold">
               Active Certificates ({certificates.length})
             </h4>
-            
+
             <AnimatePresence mode="popLayout">
               {certificates.map((cert) => (
                 <motion.div
@@ -230,7 +223,7 @@ Public Key Algorithm: ${cert.algorithm}
                         {cert.organization}
                       </p>
                     </div>
-                    
+
                     <div className="flex gap-1">
                       <Button
                         size="icon"
@@ -248,7 +241,7 @@ Public Key Algorithm: ${cert.algorithm}
                       </Button>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
                       <p className="text-muted-foreground">Algorithm</p>
@@ -267,7 +260,7 @@ Public Key Algorithm: ${cert.algorithm}
                       <p>{cert.validUntil.toLocaleDateString()}</p>
                     </div>
                   </div>
-                  
+
                   {cert.status === "valid" && (
                     <div className="flex items-center gap-2 text-xs text-green-600">
                       <CheckCircle className="h-3 w-3" />

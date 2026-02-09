@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Textarea } from "./ui/textarea";
 import { Button } from "./ui/button";
-import { Lock, Unlock, Copy, Check, Download } from "lucide-react";
+import { Lock, Unlock, Copy, Check, Download, RefreshCw, Key } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
-import type { AlgorithmType } from "./algorithm-selector";
+import { AlgorithmType } from "./algorithm-selector";
+import { CryptoService, KeyPair } from "../services/crypto-service";
 
 interface EncryptionPanelProps {
   algorithm: AlgorithmType;
@@ -17,28 +18,30 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
   const [ciphertext, setCiphertext] = useState("");
   const [isEncrypting, setIsEncrypting] = useState(false);
   const [isDecrypting, setIsDecrypting] = useState(false);
+  const [isGeneratingKeys, setIsGeneratingKeys] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const simulateEncryption = (text: string): string => {
-    // Simulate post-quantum encryption with base64 encoding and padding
-    const encoded = btoa(text);
-    const prefix = `PQC-${algorithm.toUpperCase().replace(/[^A-Z]/g, '')}-`;
-    const randomPadding = Array.from({ length: 64 }, () => 
-      Math.random().toString(36).charAt(2)
-    ).join('');
-    return `${prefix}${encoded}${randomPadding}`;
-  };
+  const [keyPair, setKeyPair] = useState<KeyPair | null>(null);
 
-  const simulateDecryption = (text: string): string => {
+  // Reset keys when algorithm changes
+  useEffect(() => {
+    setKeyPair(null);
+    setCiphertext("");
+  }, [algorithm]);
+
+  const generateKeys = async () => {
+    setIsGeneratingKeys(true);
     try {
-      // Extract the base64 part from the simulated ciphertext
-      const match = text.match(/PQC-[A-Z]+-(.+?)([a-z0-9]{64})$/);
-      if (match && match[1]) {
-        return atob(match[1]);
-      }
-      return "Invalid ciphertext format";
-    } catch {
-      return "Decryption failed";
+      // Small delay to allow UI to update
+      await new Promise(r => setTimeout(r, 100));
+      const keys = await CryptoService.generateKeyPair(algorithm);
+      setKeyPair(keys);
+      toast.success(`Generated new ${algorithm} keys`);
+    } catch (e) {
+      toast.error("Failed to generate keys. See console.");
+      console.error(e);
+    } finally {
+      setIsGeneratingKeys(false);
     }
   };
 
@@ -47,17 +50,42 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
       toast.error("Please enter text to encrypt");
       return;
     }
+    if (!keyPair) {
+      toast.error("Please generate keys first");
+      return;
+    }
 
     setIsEncrypting(true);
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    const encrypted = simulateEncryption(plaintext);
-    setCiphertext(encrypted);
-    onEncrypt(plaintext);
-    setIsEncrypting(false);
-    
-    toast.success("Data encrypted successfully with " + algorithm);
+    try {
+      // Simulate slight delay for visual feedback if instant
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      let resultString = "";
+
+      if (algorithm === "CRYSTALS-Dilithium" || algorithm === "SPHINCS+") {
+        // Signature Mode
+        const signature = await CryptoService.sign(plaintext, keyPair.privateKey, algorithm);
+        resultString = JSON.stringify({
+          data: plaintext,
+          signature: signature,
+          algorithm: algorithm
+        }, null, 2);
+        toast.success(`Data signed with ${algorithm}`);
+      } else {
+        // Encryption Mode
+        const result = await CryptoService.encrypt(plaintext, keyPair.publicKey, algorithm);
+        resultString = JSON.stringify(result, null, 2);
+        toast.success(`Data encrypted with ${algorithm}`);
+      }
+
+      setCiphertext(resultString);
+      onEncrypt(plaintext);
+    } catch (e) {
+      toast.error("Encryption failed");
+      console.error(e);
+    } finally {
+      setIsEncrypting(false);
+    }
   };
 
   const handleDecrypt = async () => {
@@ -65,16 +93,48 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
       toast.error("Please enter ciphertext to decrypt");
       return;
     }
+    if (!keyPair) {
+      toast.error("Please generate keys first");
+      return;
+    }
 
     setIsDecrypting(true);
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    const decrypted = simulateDecryption(ciphertext);
-    setPlaintext(decrypted);
-    setIsDecrypting(false);
-    
-    toast.success("Data decrypted successfully");
+    try {
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      if (algorithm === "CRYSTALS-Dilithium" || algorithm === "SPHINCS+") {
+        // Verify Mode
+        try {
+          const parsed = JSON.parse(ciphertext);
+          const isValid = await CryptoService.verify(parsed.data, parsed.signature, keyPair.publicKey, algorithm);
+          if (isValid) {
+            setPlaintext(parsed.data + "\n\n[✓ Verified Signature]");
+            toast.success("Signature Verified! Data is authentic.");
+          } else {
+            toast.error("Signature Verification Failed!");
+            setPlaintext("[INVALID SIGNATURE] " + parsed.data);
+          }
+        } catch {
+          toast.error("Invalid signature format");
+        }
+      } else {
+        // Decrypt Mode
+        try {
+          const parsed = JSON.parse(ciphertext);
+          const decrypted = await CryptoService.decrypt(parsed, keyPair.privateKey, algorithm);
+          setPlaintext(decrypted);
+          toast.success("Data decrypted successfully");
+        } catch (e) {
+          toast.error("Decryption failed. Wrong key or corrupted data.");
+          console.error(e);
+        }
+      }
+    } catch (e) {
+      toast.error("Operation failed");
+    } finally {
+      setIsDecrypting(false);
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -89,85 +149,110 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `encrypted-${Date.now()}.pqc`;
+    a.download = `encrypted-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Encrypted file downloaded");
   };
 
+  const isSignatureScheme = algorithm === "CRYSTALS-Dilithium" || algorithm === "SPHINCS+";
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <Card>
+      <Card className="flex flex-col h-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Unlock className="h-5 w-5" />
-            Plaintext Data
+            Input Data
           </CardTitle>
-          <CardDescription>Enter data to encrypt using {algorithm}</CardDescription>
+          <CardDescription>
+            {isSignatureScheme ? "Enter data to sign" : `Enter data to encrypt using ${algorithm}`}
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Textarea
-            placeholder="Enter your sensitive data here..."
-            value={plaintext}
-            onChange={(e) => setPlaintext(e.target.value)}
-            rows={8}
-            className="font-mono text-sm"
-          />
-          <Button
-            onClick={handleEncrypt}
-            disabled={isEncrypting || !plaintext.trim()}
-            className="w-full"
-          >
-            <AnimatePresence mode="wait">
-              {isEncrypting ? (
-                <motion.span
-                  key="encrypting"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-2"
+        <CardContent className="space-y-4 flex-1 flex flex-col">
+          {!keyPair ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg bg-muted/50">
+              <Key className="h-10 w-10 text-muted-foreground mb-4" />
+              <p className="text-sm text-center text-muted-foreground mb-4">
+                Generate {algorithm} keys to start secure communication
+              </p>
+              <Button onClick={generateKeys} disabled={isGeneratingKeys}>
+                {isGeneratingKeys ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Generating Keys...
+                  </>
+                ) : (
+                  "Generate Keys"
+                )}
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Textarea
+                placeholder="Enter your sensitive data here..."
+                value={plaintext}
+                onChange={(e) => setPlaintext(e.target.value)}
+                className="font-mono text-sm flex-1 min-h-[200px]"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={handleEncrypt}
+                  disabled={isEncrypting || !plaintext.trim()}
+                  className="w-full"
                 >
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  >
-                    <Lock className="h-4 w-4" />
-                  </motion.div>
-                  Encrypting...
-                </motion.span>
-              ) : (
-                <motion.span
-                  key="encrypt"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-2"
-                >
-                  <Lock className="h-4 w-4" />
-                  Encrypt Data
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </Button>
+                  <AnimatePresence mode="wait">
+                    {isEncrypting ? (
+                      <motion.span
+                        key="encrypting"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-center gap-2"
+                      >
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Processing...
+                      </motion.span>
+                    ) : (
+                      <motion.span
+                        key="encrypt"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-center gap-2"
+                      >
+                        {isSignatureScheme ? <Check className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                        {isSignatureScheme ? "Sign Data" : "Encrypt Data"}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </Button>
+                <Button variant="outline" onClick={() => setKeyPair(null)}>
+                  Clear Keys
+                </Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="flex flex-col h-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5" />
-            Encrypted Data
+            {isSignatureScheme ? "Signature / Output" : "Encrypted Data"}
           </CardTitle>
-          <CardDescription>Quantum-resistant ciphertext output</CardDescription>
+          <CardDescription>
+            {isSignatureScheme ? "Digital signature output" : "Quantum-resistant ciphertext output"}
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="relative">
+        <CardContent className="space-y-4 flex-1 flex flex-col">
+          <div className="relative flex-1">
             <Textarea
-              placeholder="Encrypted output will appear here..."
+              placeholder="Output will appear here..."
               value={ciphertext}
               onChange={(e) => setCiphertext(e.target.value)}
-              rows={8}
-              className="font-mono text-sm pr-10"
+              className="font-mono text-sm pr-10 h-full min-h-[200px] resize-none"
             />
             {ciphertext && (
               <Button
@@ -187,7 +272,7 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
           <div className="flex gap-2">
             <Button
               onClick={handleDecrypt}
-              disabled={isDecrypting || !ciphertext.trim()}
+              disabled={isDecrypting || !ciphertext.trim() || !keyPair}
               className="flex-1"
               variant="secondary"
             >
@@ -200,13 +285,8 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
                     exit={{ opacity: 0 }}
                     className="flex items-center gap-2"
                   >
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    >
-                      <Unlock className="h-4 w-4" />
-                    </motion.div>
-                    Decrypting...
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Processing...
                   </motion.span>
                 ) : (
                   <motion.span
@@ -216,8 +296,8 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
                     exit={{ opacity: 0 }}
                     className="flex items-center gap-2"
                   >
-                    <Unlock className="h-4 w-4" />
-                    Decrypt Data
+                    {isSignatureScheme ? <Check className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                    {isSignatureScheme ? "Verify Signature" : "Decrypt Data"}
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -235,3 +315,4 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
     </div>
   );
 }
+

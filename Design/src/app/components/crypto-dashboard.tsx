@@ -1,5 +1,5 @@
 import { Shield, Lock, Key, Activity, TrendingUp, Database } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 interface DashboardProps {
   stats: {
@@ -25,7 +25,7 @@ export function CryptoDashboard({ stats }: DashboardProps) {
           </p>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Active Keys</CardTitle>
@@ -38,7 +38,7 @@ export function CryptoDashboard({ stats }: DashboardProps) {
           </p>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Data Encapsulated</CardTitle>
@@ -51,7 +51,7 @@ export function CryptoDashboard({ stats }: DashboardProps) {
           </p>
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Security Level</CardTitle>
