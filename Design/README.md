@@ -4,19 +4,20 @@ A cutting-edge, high-security dashboard prototype designed to demonstrate and ma
 
 ## 🛡️ Key Features
 
-- **PQC Algorithm Suite**: Support for NIST-approved algorithms including CRYSTALS-Kyber (Encryption), CRYSTALS-Dilithium (Signatures), and SPHINCS+.
+- **PQC Algorithm Suite**: Real implementation of **ML-KEM (Kyber-768)** for Key Encapsulation. *Note: Digital Signatures (Dilithium/SPHINCS+) are currently disabled/experimental.*
 - **Security Dashboard**: Real-time visualization of encryption stats, active keys, and security levels.
 - **Quantum Threat Meter**: Predictive analysis of quantum threats vs. classical security.
-- **Key & Certificate Management**: Lifecycle management for quantum-safe cryptographic material.
+- **Key & Certificate Management**: Lifecycle management for quantum-safe cryptographic material (Generate/Clear Keys).
 - **Network Security Monitoring**: Visualization of secure network traffic and potential vulnerabilities.
 - **Quantum Simulator**: Advanced simulation environment for testing algorithm resilience.
-- **File Encryption**: Secure drag-and-drop interface for protecting sensitive data.
+- **File Encryption**: Secure drag-and-drop interface for protecting sensitive data using **Kyber + AES-256-GCM**.
 
 ## 🚀 Tech Stack
 
 - **Frontend**: React 18 with Vite
 - **Styling**: Tailwind CSS & Framer Motion (for fluid, high-tech animations)
 - **UI Components**: Radix UI & Lucide React Icons
+- **Cryptography**: `mlkem` (Kyber), `Web Crypto API` (AES-GCM), `@noble/hashes` (HKDF/SHA256)
 - **Visualizations**: Recharts & Three.js
 - **State Management**: React Hooks
 
