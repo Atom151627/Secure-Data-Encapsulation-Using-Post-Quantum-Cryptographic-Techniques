@@ -1,5 +1,6 @@
 import { MlKem768 } from 'mlkem';
-// import dilithiumPromise from 'dilithium-crystals-js';
+import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
+import { slh_dsa_sha2_192f } from '@noble/post-quantum/slh-dsa.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { hkdf } from '@noble/hashes/hkdf.js';
 
@@ -24,15 +25,7 @@ const fromHex = (hex: string): Uint8Array => new Uint8Array(hex.match(/.{1,2}/g)
 const toBase64 = (bytes: Uint8Array): string => btoa(String.fromCharCode(...bytes));
 const fromBase64 = (base64: string): Uint8Array => Uint8Array.from(atob(base64), c => c.charCodeAt(0));
 
-// Dilithium Module Cache
-let dilithium: any = null;
-async function getDilithium() {
-    if (!dilithium) {
-        // dilithium = await dilithiumPromise;
-        throw new Error("Dilithium not loaded");
-    }
-    return dilithium;
-}
+
 
 // Crypto Service
 export const CryptoService = {
@@ -56,16 +49,20 @@ export const CryptoService = {
                         break;
                     }
                 case "CRYSTALS-Dilithium":
+                    {
+                        // ML-DSA-65 (Dilithium3)
+                        const keys = ml_dsa65.keygen();
+                        publicKey = keys.publicKey;
+                        privateKey = keys.secretKey;
+                        break;
+                    }
                 case "SPHINCS+":
                     {
-                        // throw new Error("Dilithium/SPHINCS+ temporarily disabled due to build issues.");
-
-                        const lib = await getDilithium();
-                        const keys = lib.generateKeys(3);
+                        // SLH-DSA SHA2 192f
+                        const keys = slh_dsa_sha2_192f.keygen();
                         publicKey = keys.publicKey;
-                        privateKey = keys.privateKey;
+                        privateKey = keys.secretKey;
                         break;
-
                     }
                 default:
                     throw new Error(`Unsupported algorithm: ${algorithm}`);
@@ -185,47 +182,44 @@ export const CryptoService = {
         }
     },
 
-    // Signing (Dilithium)
-    async sign(_data: string, _privateKeyHex: string, _algorithm: AlgorithmType): Promise<string> {
-        /*
+    // Signing (ML-DSA / SLH-DSA)
+    async sign(data: string, privateKeyHex: string, algorithm: AlgorithmType): Promise<string> {
         const dataBytes = new TextEncoder().encode(data);
         const privateKey = fromHex(privateKeyHex);
-        
+
         switch (algorithm) {
-          case "CRYSTALS-Dilithium":
-          case "SPHINCS+":
-          {
-            const lib = await getDilithium();
-            // sign(message, privateKey, kind) - kind 3 for Dilithium3
-            const signature = lib.sign(dataBytes, privateKey, 3); 
-            return toHex(signature);
-          }
-          default:
-            throw new Error(`Algorithm ${algorithm} does not support signing.`);
+            case "CRYSTALS-Dilithium":
+                {
+                    const signature = ml_dsa65.sign(dataBytes, privateKey);
+                    return toHex(signature);
+                }
+            case "SPHINCS+":
+                {
+                    const signature = slh_dsa_sha2_192f.sign(dataBytes, privateKey);
+                    return toHex(signature);
+                }
+            default:
+                throw new Error(`Algorithm ${algorithm} does not support signing.`);
         }
-        */
-        throw new Error("Signing temporarily disabled.");
     },
 
-    // Verify (Dilithium)
-    async verify(_data: string, _signatureHex: string, _publicKeyHex: string, _algorithm: AlgorithmType): Promise<boolean> {
-        /*
+    // Verify (ML-DSA / SLH-DSA)
+    async verify(data: string, signatureHex: string, publicKeyHex: string, algorithm: AlgorithmType): Promise<boolean> {
         const dataBytes = new TextEncoder().encode(data);
         const signature = fromHex(signatureHex);
         const publicKey = fromHex(publicKeyHex);
-        
+
         switch (algorithm) {
-          case "CRYSTALS-Dilithium":
-          case "SPHINCS+":
-          {
-            const lib = await getDilithium();
-            // verify(signature, message, publicKey, kind)
-            return lib.verify(signature, dataBytes, publicKey, 3);
-          }
-          default:
-            return false;
+            case "CRYSTALS-Dilithium":
+                {
+                    return ml_dsa65.verify(signature, dataBytes, publicKey);
+                }
+            case "SPHINCS+":
+                {
+                    return slh_dsa_sha2_192f.verify(signature, dataBytes, publicKey);
+                }
+            default:
+                return false;
         }
-        */
-        return false;
     }
 };
