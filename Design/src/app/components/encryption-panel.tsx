@@ -16,6 +16,7 @@ interface EncryptionPanelProps {
 export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) {
   const [plaintext, setPlaintext] = useState("");
   const [ciphertext, setCiphertext] = useState("");
+  const [decryptedText, setDecryptedText] = useState("");
   const [isEncrypting, setIsEncrypting] = useState(false);
   const [isDecrypting, setIsDecrypting] = useState(false);
   const [isGeneratingKeys, setIsGeneratingKeys] = useState(false);
@@ -27,6 +28,7 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
   useEffect(() => {
     setKeyPair(null);
     setCiphertext("");
+    setDecryptedText("");
   }, [algorithm]);
 
   const generateKeys = async () => {
@@ -79,6 +81,7 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
       }
 
       setCiphertext(resultString);
+      setDecryptedText(""); // Clear any previous decrypted text
       onEncrypt(plaintext);
     } catch (e) {
       toast.error("Encryption failed");
@@ -118,7 +121,7 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
         // Decrypt Mode
         const parsed = JSON.parse(ciphertext);
         const decrypted = await CryptoService.decrypt(parsed, keyPair.privateKey, algorithm);
-        setPlaintext(decrypted);
+        setDecryptedText(decrypted);
         toast.success("Data decrypted successfully");
       }
     } catch (e: any) {
@@ -232,18 +235,24 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5" />
-            {isSignatureScheme ? "Signature / Output" : "Encrypted Data"}
+            {decryptedText ? "Decrypted Data" : (isSignatureScheme ? "Signature / Output" : "Encrypted Data")}
           </CardTitle>
           <CardDescription>
-            {isSignatureScheme ? "Digital signature output" : "Quantum-resistant ciphertext output"}
+            {decryptedText ? "Successfully decrypted plaintext" : (isSignatureScheme ? "Digital signature output" : "Quantum-resistant ciphertext output")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 flex-1 flex flex-col">
           <div className="relative flex-1">
             <Textarea
               placeholder="Output will appear here..."
-              value={ciphertext}
-              onChange={(e) => setCiphertext(e.target.value)}
+              value={decryptedText || ciphertext}
+              onChange={(e) => {
+                if (decryptedText) {
+                  setDecryptedText(e.target.value);
+                } else {
+                  setCiphertext(e.target.value);
+                }
+              }}
               className="font-mono text-sm pr-10 h-full min-h-[200px] resize-none"
             />
             {ciphertext && (
@@ -251,7 +260,7 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
                 size="icon"
                 variant="ghost"
                 className="absolute top-2 right-2"
-                onClick={() => copyToClipboard(ciphertext)}
+                onClick={() => copyToClipboard(decryptedText || ciphertext)}
               >
                 {copied ? (
                   <Check className="h-4 w-4 text-green-500" />

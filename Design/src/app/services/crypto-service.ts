@@ -178,7 +178,7 @@ export const CryptoService = {
             );
             return new TextDecoder().decode(decrypted);
         } catch (e) {
-            throw new Error("Decryption failed (MAC mismatch or wrong key).");
+            throw new Error("Decryption failed: Wrong private key or corrupted data. You must use the SAME keypair that was used for encryption.");
         }
     },
 
