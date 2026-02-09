@@ -111,11 +111,11 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
         const parsed = JSON.parse(ciphertext);
         const isValid = await CryptoService.verify(parsed.data, parsed.signature, keyPair.publicKey, algorithm);
         if (isValid) {
-          setDecryptedText(parsed.data + "\n\n[✓ Verified Signature]");
+          setDecryptedText("=== SIGNATURE VERIFICATION RESULT ===\n\n✓ SIGNATURE VALID\n✓ Data is authentic and unmodified\n\nOriginal Data:\n" + parsed.data);
           toast.success("Signature Verified! Data is authentic.");
         } else {
           toast.error("Signature Verification Failed!");
-          setDecryptedText("[INVALID SIGNATURE] " + parsed.data);
+          setDecryptedText("=== SIGNATURE VERIFICATION RESULT ===\n\n✗ SIGNATURE INVALID\n✗ Data may have been tampered with\n\nData (unverified):\n" + parsed.data);
         }
       } else {
         // Decrypt Mode
@@ -234,11 +234,15 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
       <Card className="flex flex-col h-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Lock className="h-5 w-5" />
-            {decryptedText ? "Decrypted Data" : (isSignatureScheme ? "Signature / Output" : "Encrypted Data")}
+            {decryptedText && isSignatureScheme ? (
+              <Check className="h-5 w-5 text-green-500" />
+            ) : (
+              <Lock className="h-5 w-5" />
+            )}
+            {decryptedText ? (isSignatureScheme ? "Verification Result" : "Decrypted Data") : (isSignatureScheme ? "Signature / Output" : "Encrypted Data")}
           </CardTitle>
           <CardDescription>
-            {decryptedText ? "Successfully decrypted plaintext" : (isSignatureScheme ? "Digital signature output" : "Quantum-resistant ciphertext output")}
+            {decryptedText ? (isSignatureScheme ? "Signature verification completed" : "Successfully decrypted plaintext") : (isSignatureScheme ? "Digital signature output" : "Quantum-resistant ciphertext output")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 flex-1 flex flex-col">

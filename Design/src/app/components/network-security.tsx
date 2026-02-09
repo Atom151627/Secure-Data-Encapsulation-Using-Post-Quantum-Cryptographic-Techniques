@@ -88,11 +88,14 @@ export function NetworkSecurity() {
     setIsScanning(true);
     setScanProgress(0);
     
+    // Set all nodes to scanning status without changing their values
     setNodes(prev => prev.map(node => ({
       ...node,
       status: "scanning" as const
     })));
 
+    // After scan completes, update status based on encryption type
+    // Threat levels remain unchanged - only status is updated
     setTimeout(() => {
       setNodes(prev => prev.map(node => ({
         ...node,
@@ -102,11 +105,19 @@ export function NetworkSecurity() {
   };
 
   const upgradeNode = (nodeId: string) => {
-    setNodes(prev => prev.map(node => 
-      node.id === nodeId
-        ? { ...node, encryption: "pqc", status: "secure" as const, threatLevel: 15 }
-        : node
-    ));
+    setNodes(prev => prev.map(node => {
+      if (node.id !== nodeId) return node;
+      
+      // Deterministic threat level based on node type after PQC upgrade
+      const pqcThreatLevel = node.type === "server" ? 15 : node.type === "router" ? 20 : 10;
+      
+      return {
+        ...node,
+        encryption: "pqc",
+        status: "secure" as const,
+        threatLevel: pqcThreatLevel
+      };
+    }));
   };
 
   const getNodeIcon = (type: NetworkNode["type"]) => {
