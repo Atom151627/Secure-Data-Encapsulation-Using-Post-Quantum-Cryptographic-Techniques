@@ -105,33 +105,25 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
 
       if (algorithm === "CRYSTALS-Dilithium" || algorithm === "SPHINCS+") {
         // Verify Mode
-        try {
-          const parsed = JSON.parse(ciphertext);
-          const isValid = await CryptoService.verify(parsed.data, parsed.signature, keyPair.publicKey, algorithm);
-          if (isValid) {
-            setPlaintext(parsed.data + "\n\n[✓ Verified Signature]");
-            toast.success("Signature Verified! Data is authentic.");
-          } else {
-            toast.error("Signature Verification Failed!");
-            setPlaintext("[INVALID SIGNATURE] " + parsed.data);
-          }
-        } catch {
-          toast.error("Invalid signature format");
+        const parsed = JSON.parse(ciphertext);
+        const isValid = await CryptoService.verify(parsed.data, parsed.signature, keyPair.publicKey, algorithm);
+        if (isValid) {
+          setPlaintext(parsed.data + "\n\n[✓ Verified Signature]");
+          toast.success("Signature Verified! Data is authentic.");
+        } else {
+          toast.error("Signature Verification Failed!");
+          setPlaintext("[INVALID SIGNATURE] " + parsed.data);
         }
       } else {
         // Decrypt Mode
-        try {
-          const parsed = JSON.parse(ciphertext);
-          const decrypted = await CryptoService.decrypt(parsed, keyPair.privateKey, algorithm);
-          setPlaintext(decrypted);
-          toast.success("Data decrypted successfully");
-        } catch (e) {
-          toast.error("Decryption failed. Wrong key or corrupted data.");
-          console.error(e);
-        }
+        const parsed = JSON.parse(ciphertext);
+        const decrypted = await CryptoService.decrypt(parsed, keyPair.privateKey, algorithm);
+        setPlaintext(decrypted);
+        toast.success("Data decrypted successfully");
       }
-    } catch (e) {
-      toast.error("Operation failed");
+    } catch (e: any) {
+      console.error("Decryption error:", e);
+      toast.error(e?.message || "Operation failed. Check console for details.");
     } finally {
       setIsDecrypting(false);
     }
