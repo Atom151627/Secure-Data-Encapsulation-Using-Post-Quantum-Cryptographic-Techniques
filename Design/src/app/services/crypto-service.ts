@@ -98,7 +98,7 @@ export const CryptoService = {
             case "FrodoKEM":
                 {
                     const sender = new MlKem768();
-                    const [ct, ss] = await sender.encapsulate(publicKey);
+                    const [ct, ss] = await sender.encap(publicKey);
                     encapsulation = ct;
                     sharedSecret = ss;
                     break;
@@ -116,7 +116,7 @@ export const CryptoService = {
 
         // 3. Encrypt Data using AES-256-GCM
         const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV
-        const key = await crypto.subtle.importKey("raw", aesKey, "AES-GCM", false, ["encrypt"]);
+        const key = await crypto.subtle.importKey("raw", aesKey as any, "AES-GCM", false, ["encrypt"]);
         const encryptedContent = await crypto.subtle.encrypt(
             { name: "AES-GCM", iv },
             key,
@@ -155,7 +155,7 @@ export const CryptoService = {
                     const encap = fromHex(encryptedData.encapsulation);
                     const recipient = new MlKem768();
                     // decapsulate(cipherText, secretKey)
-                    const ss = await recipient.decapsulate(encap, privateKey);
+                    const ss = await recipient.decap(encap, privateKey);
                     sharedSecret = ss;
                     break;
                 }
@@ -171,7 +171,7 @@ export const CryptoService = {
         const iv = combined.slice(0, 12);
         const ciphertext = combined.slice(12);
 
-        const key = await crypto.subtle.importKey("raw", aesKey, "AES-GCM", false, ["decrypt"]);
+        const key = await crypto.subtle.importKey("raw", aesKey as any, "AES-GCM", false, ["decrypt"]);
 
         try {
             const decrypted = await crypto.subtle.decrypt(
@@ -186,7 +186,7 @@ export const CryptoService = {
     },
 
     // Signing (Dilithium)
-    async sign(data: string, privateKeyHex: string, algorithm: AlgorithmType): Promise<string> {
+    async sign(_data: string, _privateKeyHex: string, _algorithm: AlgorithmType): Promise<string> {
         /*
         const dataBytes = new TextEncoder().encode(data);
         const privateKey = fromHex(privateKeyHex);
@@ -208,7 +208,7 @@ export const CryptoService = {
     },
 
     // Verify (Dilithium)
-    async verify(data: string, signatureHex: string, publicKeyHex: string, algorithm: AlgorithmType): Promise<boolean> {
+    async verify(_data: string, _signatureHex: string, _publicKeyHex: string, _algorithm: AlgorithmType): Promise<boolean> {
         /*
         const dataBytes = new TextEncoder().encode(data);
         const signature = fromHex(signatureHex);
