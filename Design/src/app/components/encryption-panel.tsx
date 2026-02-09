@@ -111,11 +111,11 @@ export function EncryptionPanel({ algorithm, onEncrypt }: EncryptionPanelProps) 
         const parsed = JSON.parse(ciphertext);
         const isValid = await CryptoService.verify(parsed.data, parsed.signature, keyPair.publicKey, algorithm);
         if (isValid) {
-          setPlaintext(parsed.data + "\n\n[✓ Verified Signature]");
+          setDecryptedText(parsed.data + "\n\n[✓ Verified Signature]");
           toast.success("Signature Verified! Data is authentic.");
         } else {
           toast.error("Signature Verification Failed!");
-          setPlaintext("[INVALID SIGNATURE] " + parsed.data);
+          setDecryptedText("[INVALID SIGNATURE] " + parsed.data);
         }
       } else {
         // Decrypt Mode
