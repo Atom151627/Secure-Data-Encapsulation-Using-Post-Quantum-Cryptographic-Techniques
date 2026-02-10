@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
+import { Button } from "./components/ui/button";
 import { CryptoDashboard } from "./components/crypto-dashboard";
 import { AlgorithmSelector, type AlgorithmType } from "./components/algorithm-selector";
 import { EncryptionPanel } from "./components/encryption-panel";
