@@ -11,7 +11,8 @@ import { FileEncryption } from "./components/file-encryption";
 import { QuantumSimulator } from "./components/quantum-simulator";
 import { CertificateManager } from "./components/certificate-manager";
 import { NetworkSecurity } from "./components/network-security";
-import { Shield, Lock, Key, Activity, BarChart3, AlertTriangle, Upload, Cpu, Award, Network } from "lucide-react";
+import { LoginPage } from "./components/login-page";
+import { Shield, Lock, Key, Activity, BarChart3, AlertTriangle, Upload, Cpu, Award, Network, LogOut } from "lucide-react";
 import { Toaster } from "./components/ui/sonner";
 import { motion } from "motion/react";
 
@@ -24,6 +25,7 @@ interface Activity {
 }
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<AlgorithmType>("CRYSTALS-Kyber");
   const [activities, setActivities] = useState<Activity[]>([]);
   const [stats, setStats] = useState({
@@ -91,6 +93,10 @@ function App() {
   }, []);
 
   return (
+    <>
+      {!isAuthenticated ? (
+        <LoginPage onLogin={() => setIsAuthenticated(true)} />
+      ) : (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Animated background effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -153,6 +159,20 @@ function App() {
                     Secure Data Encapsulation Using Quantum-Resistant Techniques
                   </p>
                 </div>
+              </div>
+
+              {/* Logout Button */}
+              <div className="flex items-center gap-4">
+                <span className="text-white/80 text-sm hidden sm:inline">Welcome, Adithya</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAuthenticated(false)}
+                  className="border-white/20 text-white hover:bg-white/10 hover:text-white"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
               </div>
               
               {/* Animated logo area */}
@@ -356,6 +376,8 @@ function App() {
 
       <Toaster position="top-right" />
     </div>
+      )}
+    </>
   );
 }
 
