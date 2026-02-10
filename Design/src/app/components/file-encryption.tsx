@@ -33,7 +33,11 @@ export function FileEncryption({ algorithm, onFileEncrypt }: FileEncryptionProps
   // Reset keys when algorithm changes
   useEffect(() => {
     setFiles([]);
-    setKeyPair(null);
+    // Don't reset keyPair immediately - let user know they need new keys
+    if (keyPair && keyPair.algorithm !== algorithm) {
+      setKeyPair(null);
+      toast.info(`Algorithm changed to ${algorithm}. Please generate new keys.`);
+    }
   }, [algorithm]);
 
   const generateKeys = async () => {
@@ -169,18 +173,42 @@ export function FileEncryption({ algorithm, onFileEncrypt }: FileEncryptionProps
   };
 
   const decryptFile = async (file: EncryptedFile) => {
-    if (!keyPair || !file.encryptedData) return;
+    if (!keyPair) {
+      toast.error("Generate keys first!");
+      return;
+    }
+    if (!file.encryptedData) {
+      toast.error("No encrypted data available");
+      return;
+    }
 
-    setFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: "decrypting" } : f));
+    setFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: "decrypting", progress: 0 } : f));
 
     try {
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setFiles(prev => prev.map(f =>
+          f.id === file.id && f.progress < 90 ? { ...f, progress: f.progress + 10 } : f
+        ));
+      }, 100);
+
       const parsed = JSON.parse(file.encryptedData);
+
+      // Check if algorithm matches
+      if (parsed.algorithm && parsed.algorithm !== algorithm) {
+        clearInterval(progressInterval);
+        toast.error(`File was encrypted with ${parsed.algorithm}. Please switch to that algorithm.`);
+        setFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: "encrypted", progress: 100 } : f));
+        return;
+      }
 
       if (algorithm === "CRYSTALS-Dilithium" || algorithm === "SPHINCS+") {
         const valid = await CryptoService.verify(parsed.data, parsed.signature, keyPair.publicKey, algorithm);
+        clearInterval(progressInterval);
         if (valid) {
-          toast.success("Signature Verified!");
-          downloadDataUrl(parsed.data, file.name); // Download original
+          setFiles(prev => prev.map(f => f.id === file.id ? { ...f, progress: 100 } : f));
+          toast.success("Signature Verified! Downloading original file...");
+          downloadDataUrl(parsed.data, file.name);
           setFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: "decrypted" } : f));
         } else {
           toast.error("Signature Verification Failed!");
@@ -189,13 +217,15 @@ export function FileEncryption({ algorithm, onFileEncrypt }: FileEncryptionProps
       } else {
         // Decrypt
         const decryptedDataUrl = await CryptoService.decrypt(parsed, keyPair.privateKey, algorithm);
+        clearInterval(progressInterval);
+        setFiles(prev => prev.map(f => f.id === file.id ? { ...f, progress: 100 } : f));
+        toast.success("Decrypted successfully! Downloading...");
         downloadDataUrl(decryptedDataUrl, file.name);
         setFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: "decrypted" } : f));
-        toast.success("Decrypted & Downloaded");
       }
     } catch (e) {
       console.error(e);
-      toast.error("Decryption failed");
+      toast.error("Decryption failed: " + (e instanceof Error ? e.message : "Unknown error"));
       setFiles(prev => prev.map(f => f.id === file.id ? { ...f, status: "failed" } : f));
     }
   };
